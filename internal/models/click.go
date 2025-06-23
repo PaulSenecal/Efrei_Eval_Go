@@ -1,28 +1,21 @@
-//internal\models\click.go
 package models
 
-import (
-    "time"
-    "gorm.io/gorm"
-)
+import "time"
 
 // Click représente un événement de clic sur un lien raccourci.
-// GORM utilisera ces tags pour créer la table 'clicks'.
-/*type Click struct { //change time
-	ID        uint      `gorm:"primaryKey"`        // Clé primaire
-	LinkID    uint      `gorm:"index"`             // Clé étrangère vers la table 'links', indexée pour des requêtes efficaces
-	Link      Link      `gorm:"foreignKey:LinkID"` // Relation GORM: indique que LinkID est une FK vers le champ ID de Link
-	Timestamp time.Time // Horodatage précis du clic
-	UserAgent string    `gorm:"size:255"` // User-Agent de l'utilisateur qui a cliqué (informations sur le navigateur/OS)
-	IPAddress string    `gorm:"size:50"`  // Adresse IP de l'utilisateur
-*/
+type Click struct {
+ID        uint      `gorm:"primaryKey"`        // Clé primaire
+LinkID    uint      `gorm:"index"`             // Clé étrangère vers la table 'links', indexée pour des requêtes efficaces
+Link      Link      `gorm:"foreignKey:LinkID"` // Relation GORM: indique que LinkID est une FK vers le champ ID de Link
+Timestamp time.Time // Horodatage précis du clic
+UserAgent string    `gorm:"size:255"` // User-Agent de l'utilisateur
+IPAddress string    `gorm:"size:50"`  // Adresse IP de l'utilisateur
+}
 
-	type Click struct {
-		ID          uint      `gorm:"primaryKey"`
-		LinkID      uint      `gorm:"not null"`
-		IPAddress   string
-		UserAgent   string
-		ClickedAt   time.Time
-		CreatedAt   time.Time
-		UpdatedAt   time.Time
-	}
+// ClickEvent représente un clic brut, transmis dans un channel (non stocké directement par GORM)
+type ClickEvent struct {
+LinkID    uint
+Timestamp time.Time
+UserAgent string
+IP        string
+}
