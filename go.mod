@@ -3,6 +3,7 @@ module github.com/axellelanca/urlshortener
 go 1.24.3
 
 require (
+	github.com/axellelanca/urlshortener v0.0.0-20250623073943-e06aacf07024
 	github.com/gin-gonic/gin v1.10.1
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1

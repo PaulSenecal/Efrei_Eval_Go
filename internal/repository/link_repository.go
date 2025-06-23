@@ -1,3 +1,4 @@
+//internal\repository\link_repository.go
 package repository
 
 import (
@@ -7,53 +8,61 @@ import (
 	"gorm.io/gorm"
 )
 
-// LinkRepository est une interface qui définit les méthodes d'accès aux données
-// pour les opérations CRUD sur les liens.
 type LinkRepository interface {
-	CreateLink(link *models.Link) error
-	GetLinkByShortCode(shortCode string) (*models.Link, error)
-	GetAllLinks() ([]models.Link, error)
-	CountClicksByLinkID(linkID uint) (int, error)
+    CreateNewLink(link *models.Link) error
+    GetLinkByShortCode(shortCode string) (*models.Link, error)
+    DoesShortCodeExist(shortCode string) bool
+    IncrementClickCount(shortCode string) error
+    GetAllActiveLinks() ([]models.Link, error)
+    UpdateLinkAccessibilityStatus(linkID uint, isAccessible bool) error
 }
 
-// TODO :  GormLinkRepository est l'implémentation de LinkRepository utilisant GORM.
-type GormLinkRepository struct {
+type linkRepositoryImplementation struct {
+    databaseConnection *gorm.DB
 }
 
-// NewLinkRepository crée et retourne une nouvelle instance de GormLinkRepository.
-// Cette fonction retourne *GormLinkRepository, qui implémente l'interface LinkRepository.
-func NewLinkRepository(db *gorm.DB) *GormLinkRepository {
-	// TODO
+func NewLinkRepository(databaseConnection *gorm.DB) LinkRepository {
+    return &linkRepositoryImplementation{
+        databaseConnection: databaseConnection,
+    }
 }
 
-// CreateLink insère un nouveau lien dans la base de données.
-func (r *GormLinkRepository) CreateLink(link *models.Link) error {
-	// TODO 1: Utiliser GORM pour créer un nouvel enregistrement (link) dans la table des liens.
-
+func (repository *linkRepositoryImplementation) CreateNewLink(link *models.Link) error {
+    return repository.databaseConnection.Create(link).Error
 }
 
-// GetLinkByShortCode récupère un lien de la base de données en utilisant son shortCode.
-// Il renvoie gorm.ErrRecordNotFound si aucun lien n'est trouvé avec ce shortCode.
-func (r *GormLinkRepository) GetLinkByShortCode(shortCode string) (*models.Link, error) {
-	var link models.Link
-	// TODO 2: Utiliser GORM pour trouver un lien par son ShortCode.
-	// La méthode First de GORM recherche le premier enregistrement correspondant et le mappe à 'link'.
-
+func (repository *linkRepositoryImplementation) GetLinkByShortCode(shortCode string) (*models.Link, error) {
+    var link models.Link
+    result := repository.databaseConnection.Where("short_code = ?", shortCode).First(&link)
+    if result.Error != nil {
+        if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+            return nil, errors.New("lien non trouvé")
+        }
+        return nil, result.Error
+    }
+    return &link, nil
 }
 
-// GetAllLinks récupère tous les liens de la base de données.
-// Cette méthode est utilisée par le moniteur d'URLs.
-func (r *GormLinkRepository) GetAllLinks() ([]models.Link, error) {
-	var links []models.Link
-	// TODO 3: Utiliser GORM pour récupérer tous les liens.
-
+func (repository *linkRepositoryImplementation) DoesShortCodeExist(shortCode string) bool {
+    var count int64
+    repository.databaseConnection.Model(&models.Link{}).Where("short_code = ?", shortCode).Count(&count)
+    return count > 0
 }
 
-// CountClicksByLinkID compte le nombre total de clics pour un ID de lien donné.
-func (r *GormLinkRepository) CountClicksByLinkID(linkID uint) (int, error) {
-	var count int64 // GORM retourne un int64 pour les comptes
-	// TODO 4: Utiliser GORM pour compter les enregistrements dans la table 'clicks'
-	// où 'LinkID' correspond à l'ID du lien donné.
+func (repository *linkRepositoryImplementation) IncrementClickCount(shortCode string) error {
+    return repository.databaseConnection.Model(&models.Link{}).
+        Where("short_code = ?", shortCode).
+        Update("total_clicks", gorm.Expr("total_clicks + ?", 1)).Error
+}
 
-	return int(count), nil
+func (repository *linkRepositoryImplementation) GetAllActiveLinks() ([]models.Link, error) {
+    var activeLinks []models.Link
+    result := repository.databaseConnection.Find(&activeLinks)
+    return activeLinks, result.Error
+}
+
+func (repository *linkRepositoryImplementation) UpdateLinkAccessibilityStatus(linkID uint, isAccessible bool) error {
+    return repository.databaseConnection.Model(&models.Link{}).
+        Where("id = ?", linkID).
+        Update("is_accessible", isAccessible).Error
 }

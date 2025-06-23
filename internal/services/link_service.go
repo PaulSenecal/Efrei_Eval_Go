@@ -1,3 +1,4 @@
+//internal\services\link_service.go
 package services
 
 import (
@@ -14,93 +15,97 @@ import (
 	"github.com/axellelanca/urlshortener/internal/repository" // Importe le package repository
 )
 
-// Définition du jeu de caractères pour la génération des codes courts.
-const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-
-// TODO Créer la struct
-// LinkService est une structure qui g fournit des méthodes pour la logique métier des liens.
-// Elle détient linkRepo qui est une référence vers une interface LinkRepository.
-// IMPORTANT : Le champ doit être du type de l'interface (non-pointeur).
-
-
-// NewLinkService crée et retourne une nouvelle instance de LinkService.
-func NewLinkService(linkRepo repository.LinkRepository) *LinkService {
-	return &LinkService{
-		linkRepo: linkRepo,
-	}
+type LinkService interface {
+    CreateShortLink(longURL string) (*models.Link, error)
+    GetLinkByShortCode(shortCode string) (*models.Link, error)
+    GetLinkStatistics(shortCode string) (*models.LinkStatistics, error)
+    GetAllActiveLinks() ([]models.Link, error)
+    UpdateLinkAccessibilityStatus(linkID uint, isAccessible bool) error
 }
 
-// TODO Créer la méthode GenerateShortCode
-// GenerateShortCode est une méthode rattachée à LinkService
-// Elle génère un code court aléatoire d'une longueur spécifiée. Elle prend une longueur en paramètre et retourne une string et une erreur
-// Il utilise le package 'crypto/rand' pour éviter la prévisibilité.
-// Je vous laisse chercher un peu :) C'est faisable en une petite dizaine de ligne
-
-
-// CreateLink crée un nouveau lien raccourci.
-// Il génère un code court unique, puis persiste le lien dans la base de données.
-func (s *LinkService) CreateLink(longURL string) (*models.Link, error) {
-	// TODO 1: Implémenter la logique de retry pour générer un code court unique.
-	// Essayez de générer un code, vérifiez s'il existe déjà en base, et retentez si une collision est trouvée.
-	// Limitez le nombre de tentatives pour éviter une boucle infinie.
-
-	// TODO Créer une variable shortcode pour stocker le shortcode créé
-
-	// TODO Définir un nombre maximum (5) de tentative pour trouver un code unique  (maxRetries)
-
-
-	for i := 0; i < maxRetries; i++ {
-		// TODO : Génère un code de 6 caractères (GenerateShortCode)
-
-
-		// TODO : Vérifie si le code généré existe déjà en base de données (GetLinkbyShortCode)
-		// On ignore la première valeur
-
-		if err != nil {
-			// Si l'erreur est 'record not found' de GORM, cela signifie que le code est unique.
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				shortCode = code // Le code est unique, on peut l'utiliser
-				break            // Sort de la boucle de retry
-			}
-			// Si c'est une autre erreur de base de données, retourne l'erreur.
-			return nil, fmt.Errorf("database error checking short code uniqueness: %w", err)
-		}
-
-		// Si aucune erreur (le code a été trouvé), cela signifie une collision.
-		log.Printf("Short code '%s' already exists, retrying generation (%d/%d)...", code, i+1, maxRetries)
-		// La boucle continuera pour générer un nouveau code.
-	}
-
-	// TODO : Si après toutes les tentatives, aucun code unique n'a été trouvé... Errors.New
-
-
-	// TODO Crée une nouvelle instance du modèle Link.
-	link :=
-
-	// TODO Persiste le nouveau lien dans la base de données via le repository (CreateLink)
-
-
-	// TODO Retourne le lien créé
-
+type linkServiceImplementation struct {
+    linkRepository repository.LinkRepository
 }
 
-// GetLinkByShortCode récupère un lien via son code court.
-// Il délègue l'opération de recherche au repository.
-func (s *LinkService) GetLinkByShortCode(shortCode string) (*models.Link, error) {
-	// TODO : Récupérer un lien par son code court en utilisant s.linkRepo.GetLinkByShortCode.
-	// Retourner le lien trouvé ou une erreur si non trouvé/problème DB.
-
+func NewLinkService(linkRepository repository.LinkRepository) LinkService {
+    return &linkServiceImplementation{
+        linkRepository: linkRepository,
+    }
 }
 
-// GetLinkStats récupère les statistiques pour un lien donné (nombre total de clics).
-// Il interagit avec le LinkRepository pour obtenir le lien, puis avec le ClickRepository
-func (s *LinkService) GetLinkStats(shortCode string) (*models.Link, int, error) {
-	// TODO : Récupérer le lien par son shortCode
-
-
-	// TODO 4: Compter le nombre de clics pour ce LinkID
-
-	// TODO : on retourne les 3 valeurs
-	return
+func (service *linkServiceImplementation) CreateShortLink(longURL string) (*models.Link, error) {
+    if longURL == "" {
+        return nil, errors.New("l'URL ne peut pas être vide")
+    }
+    
+    uniqueShortCode, err := service.generateUniqueShortCode()
+    if err != nil {
+        return nil, err
+    }
+    
+    newLink := &models.Link{
+        ShortCode:    uniqueShortCode,
+        LongURL:      longURL,
+        IsAccessible: true,
+    }
+    
+    err = service.linkRepository.CreateNewLink(newLink)
+    if err != nil {
+        return nil, err
+    }
+    
+    return newLink, nil
 }
 
+func (service *linkServiceImplementation) GetLinkByShortCode(shortCode string) (*models.Link, error) {
+    return service.linkRepository.GetLinkByShortCode(shortCode)
+}
+
+func (service *linkServiceImplementation) GetLinkStatistics(shortCode string) (*models.LinkStatistics, error) {
+    link, err := service.linkRepository.GetLinkByShortCode(shortCode)
+    if err != nil {
+        return nil, err
+    }
+    
+    return &models.LinkStatistics{
+        ShortCode:   link.ShortCode,
+        LongURL:     link.LongURL,
+        TotalClicks: link.TotalClicks,
+    }, nil
+}
+
+func (service *linkServiceImplementation) GetAllActiveLinks() ([]models.Link, error) {
+    return service.linkRepository.GetAllActiveLinks()
+}
+
+func (service *linkServiceImplementation) UpdateLinkAccessibilityStatus(linkID uint, isAccessible bool) error {
+    return service.linkRepository.UpdateLinkAccessibilityStatus(linkID, isAccessible)
+}
+
+func (service *linkServiceImplementation) generateUniqueShortCode() (string, error) {
+    const maximumRetryAttempts = 10
+    
+    for attemptNumber := 0; attemptNumber < maximumRetryAttempts; attemptNumber++ {
+        randomShortCode, err := generateRandomAlphanumericCode(6)
+        if err != nil {
+            return "", err
+        }
+        
+        if !service.linkRepository.DoesShortCodeExist(randomShortCode) {
+            return randomShortCode, nil
+        }
+    }
+    
+    return "", errors.New("impossible de générer un code unique après plusieurs tentatives")
+}
+
+func generateRandomAlphanumericCode(codeLength int) (string, error) {
+    randomBytes := make([]byte, codeLength)
+    _, err := rand.Read(randomBytes)
+    if err != nil {
+        return "", err
+    }
+    
+    encodedCode := base64.URLEncoding.EncodeToString(randomBytes)
+    return encodedCode[:codeLength], nil
+}
