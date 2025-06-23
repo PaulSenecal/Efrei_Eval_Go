@@ -1,3 +1,4 @@
+//cmd\root.go
 package cmd
 
 import (
@@ -28,28 +29,26 @@ var Cfg *config.Config
 
 // Execute est le point d'entrée principal pour l'application Cobra.
 // Il est appelé depuis 'main.go'.
-func Execute() {
-	if err := RootCmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "Erreur lors de l'exécution de la commande: %v\n", err)
-		os.Exit(1)
-	}
+
+
+var rootCommand = &cobra.Command{
+    Use:   "url-shortener",
+    Short: "Service de raccourcissement d'URLs",
 }
 
-// init() est une fonction spéciale de Go qui s'exécute automatiquement
-// avant la fonction main(). Elle est utilisée ici pour initialiser Cobra
-// et ajouter toutes les sous-commandes.
-func init() {
-	// TODO Initialiser la configuration globale avec OnInitialize
+func Execute() {
+    if err := rootCommand.Execute(); err != nil {
+        //fmt.Println(err)
+		fmt.Fprintf(os.Stderr, "Erreur lors de l'exécution de la commande: %v\n", err)
+        os.Exit(1)
+    }
+}
 
-	// IMPORTANT : Ici, nous n'appelons PAS RootCmd.AddCommand() directement
-	// pour les commandes 'server', 'create', 'stats', 'migrate'.
-	// Ces commandes s'enregistreront elles-mêmes via leur propre fonction init().
-	//
-	// Assurez-vous que tous les fichiers de commande comme
-	// 'cmd/server/server.go' et 'cmd/cli/*.go' aient bien
-	// un `import "url-shortener/cmd"`
-	// et un `func init() { cmd.RootCmd.AddCommand(MaCommandeCmd) }`
-	// C'est ce qui va faire le lien !
+func init() {
+    rootCommand.AddCommand(server.ServerCommand)
+    rootCommand.AddCommand(cli.CreateCommand)
+    rootCommand.AddCommand(cli.StatsCommand)
+    rootCommand.AddCommand(cli.MigrateCommand)
 }
 
 // initConfig charge la configuration de l'application.

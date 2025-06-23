@@ -1,3 +1,4 @@
+//cmd\cli\stats.go
 package cli
 
 import (
