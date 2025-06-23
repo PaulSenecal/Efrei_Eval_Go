@@ -1,3 +1,4 @@
+//cmd\root.go
 package cmd
 
 import (
@@ -43,5 +44,6 @@ var err error
 Cfg, err = config.LoadConfig()
 if err != nil {
 log.Printf("Attention: Problème lors du chargement de la configuration: %v. Utilisation des valeurs par défaut.", err)
+
 }
 }

@@ -1,3 +1,4 @@
+//cmd\cli\migrate.go
 package cli
 
 import (
@@ -10,6 +11,7 @@ cmd2 "github.com/axellelanca/urlshortener/cmd"
 "gorm.io/driver/sqlite" // Driver SQLite pour GORM
 "gorm.io/gorm"
 )
+
 
 // MigrateCmd représente la commande 'migrate'
 var MigrateCmd = &cobra.Command{
@@ -46,3 +48,4 @@ fmt.Println("Migrations de la base de données exécutées avec succès.")
 func init() {
 cmd2.RootCmd.AddCommand(MigrateCmd)
 }
+

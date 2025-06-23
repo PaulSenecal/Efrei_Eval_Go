@@ -1,3 +1,4 @@
+//cmd\cli\stats.go
 package cli
 
 import (
@@ -13,6 +14,7 @@ cmd2 "github.com/axellelanca/urlshortener/cmd"
 "gorm.io/driver/sqlite" // Driver SQLite pour GORM
 "gorm.io/gorm"
 )
+
 
 var shortCodeFlag string // variable pour le flag --code
 
@@ -75,7 +77,6 @@ StatsCmd.Flags().StringVar(&shortCodeFlag, "code", "", "Code court pour lequel a
 err := StatsCmd.MarkFlagRequired("code")
 if err != nil {
 log.Fatalf("Erreur lors du marquage du flag --code comme requis: %v", err)
-}
 
 // Ajouter la commande à RootCmd
 cmd2.RootCmd.AddCommand(StatsCmd)
