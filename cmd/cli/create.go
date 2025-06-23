@@ -7,7 +7,7 @@ import (
 	"net/url" // Pour valider le format de l'URL
 	"os"
 
-	cmd2 "urlshortenerGroupe8/cmd"
+	/*cmd2*/ "urlshortenerGroupe8/cmd"
 	"urlshortenerGroupe8/internal/repository"
 	"urlshortenerGroupe8/internal/services"
 	"github.com/spf13/cobra"
