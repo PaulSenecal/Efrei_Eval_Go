@@ -1,3 +1,4 @@
+//internal\workers\click_workers.go
 package workers
 
 import (
@@ -7,37 +8,63 @@ import (
 	"github.com/axellelanca/urlshortener/internal/repository" // Nécessaire pour interagir avec le ClickRepository
 )
 
-// StartClickWorkers lance un pool de goroutines "workers" pour traiter les événements de clic.
-// Chaque worker lira depuis le même 'clickEventsChan' et utilisera le 'clickRepo' pour la persistance.
-func StartClickWorkers(workerCount int, clickEventsChan <-chan models.ClickEvent, clickRepo repository.ClickRepository) {
-	log.Printf("Starting %d click worker(s)...", workerCount)
-	for i := 0; i < workerCount; i++ {
-		// Lance chaque worker dans sa propre goroutine.
-		// Le channel est passé en lecture seule (<-chan) pour renforcer l'immutabilité du channel à l'intérieur du worker.
-		go clickWorker(clickEventsChan, clickRepo)
-	}
+type ClickWorkerManager struct {
+    clickEventChannel chan models.ClickEvent
+    clickService      services.ClickService
+    numberOfWorkers   int
+    waitGroup         sync.WaitGroup
+    shouldStop        chan bool
 }
 
-// clickWorker est la fonction exécutée par chaque goroutine worker.
-// Elle tourne indéfiniment, lisant les événements de clic dès qu'ils sont disponibles dans le channel.
-func clickWorker(clickEventsChan <-chan models.ClickEvent, clickRepo repository.ClickRepository) {
-	for event := range clickEventsChan { // Boucle qui lit les événements du channel
-		// TODO 1: Convertir le 'ClickEvent' (reçu du channel) en un modèle 'models.Click'.
+func NewClickWorkerManager(
+    clickEventChannel chan models.ClickEvent,
+    clickService services.ClickService,
+    numberOfWorkers int,
+) *ClickWorkerManager {
+    return &ClickWorkerManager{
+        clickEventChannel: clickEventChannel,
+        clickService:      clickService,
+        numberOfWorkers:   numberOfWorkers,
+        shouldStop:        make(chan bool),
+    }
+}
 
-		// TODO 2: Persister le clic en base de données via le 'clickRepo' (CreateClick).
-		// Implémentez ici une gestion d'erreur simple : loggez l'erreur si la persistance échoue.
-		// Pour un système en production, une logique de retry
+func (manager *ClickWorkerManager) StartAllWorkers() {
+    for workerID := 1; workerID <= manager.numberOfWorkers; workerID++ {
+        manager.waitGroup.Add(1)
+        go manager.runSingleWorker(workerID)
+    }
+    log.Printf("Démarrage de %d workers pour l'enregistrement des clics", manager.numberOfWorkers)
+}
 
-		if err != nil {
-			// Si une erreur se produit lors de l'enregistrement, logguez-la.
-			// L'événement est "perdu" pour ce TP, mais dans un vrai système,
-			// vous pourriez le remettre dans une file de retry ou une file d'erreurs.
-			log.Printf("ERROR: Failed to save click for LinkID %d (UserAgent: %s, IP: %s): %v",
-				event.LinkID, event.UserAgent, event.IPAddress, err)
+func (manager *ClickWorkerManager) StopAllWorkers() {
+    close(manager.shouldStop)
+    manager.waitGroup.Wait()
+    log.Println("Tous les workers de clics ont été arrêtés")
+}
 
-		} else {
-			// Log optionnel pour confirmer l'enregistrement (utile pour le débogage)
-			log.Printf("Click recorded successfully for LinkID %d", event.LinkID)
-		}
-	}
+func (manager *ClickWorkerManager) runSingleWorker(workerID int) {
+    defer manager.waitGroup.Done()
+    
+    for {
+        select {
+        case clickEvent, channelIsOpen := <-manager.clickEventChannel:
+            if !channelIsOpen {
+                return
+            }
+            manager.processClickEvent(clickEvent, workerID)
+            
+        case <-manager.shouldStop:
+            return
+        }
+    }
+}
+
+func (manager *ClickWorkerManager) processClickEvent(clickEvent models.ClickEvent, workerID int) {
+    log.Printf("Worker %d traite un clic pour le code: %s", workerID, clickEvent.ShortCode)
+    
+    err := manager.clickService.RecordClickEvent(clickEvent, 0)
+    if err != nil {
+        log.Printf("Worker %d - Erreur lors de l'enregistrement du clic: %v", workerID, err)
+    }
 }

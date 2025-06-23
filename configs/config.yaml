@@ -1,7 +1,8 @@
 # Configuration du serveur web Gin
 server:
-  port: 8080                               # Port d'écoute du serveur HTTP
-  base_url: "http://localhost:8080"        # URL de base du service, utilisée pour construire les URLs courtes complètes
+  port: 8080 
+  host: "localhost"                              # Port d'écoute du serveur HTTP
+          # URL de base du service, utilisée pour construire les URLs courtes complètes
 
 # Configuration de la base de données
 database:
@@ -17,3 +18,7 @@ analytics:
 monitor:
   interval_minutes: 5                      # Intervalle en minutes entre chaque vérification de l'état des URLs longues.
   # Exemple: 1 pour chaque minute, 60 pour chaque heure.
+
+short_url:
+  code_length: 6
+  base_url: "http://localhost:8080"
