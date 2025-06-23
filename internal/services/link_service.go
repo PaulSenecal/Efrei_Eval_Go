@@ -1,3 +1,4 @@
+//internal\services\link_service.go
 package services
 
 import (
@@ -13,6 +14,7 @@ import (
 	"github.com/axellelanca/urlshortener/internal/models"
 	"github.com/axellelanca/urlshortener/internal/repository" // Importe le package repository
 )
+
 
 const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
@@ -104,3 +106,4 @@ func (s *LinkService) GetLinkStats(shortCode string) (*models.Link, int, error) 
 
 	return link, count, nil
 }
+

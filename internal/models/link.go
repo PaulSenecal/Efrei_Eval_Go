@@ -1,4 +1,9 @@
+//internal\models\link.go
 package models
+import (
+    "time"
+    "gorm.io/gorm"
+)
 
 import "time"
 
@@ -9,3 +14,4 @@ type Link struct {
 	LongURL   string    `gorm:"not null"`            // Lien original obligatoire
 	CreatedAt time.Time // Géré automatiquement par GORM
 }
+

@@ -4,12 +4,13 @@ import "time"
 
 // Click représente un événement de clic sur un lien raccourci.
 type Click struct {
-	ID        uint      `gorm:"primaryKey"`        // Clé primaire
-	LinkID    uint      `gorm:"index"`             // Clé étrangère vers la table 'links', indexée pour des requêtes efficaces
-	Link      Link      `gorm:"foreignKey:LinkID"` // Relation GORM: indique que LinkID est une FK vers le champ ID de Link
-	Timestamp time.Time // Horodatage précis du clic
-	UserAgent string    `gorm:"size:255"` // User-Agent de l'utilisateur
-	IPAddress string    `gorm:"size:50"`  // Adresse IP de l'utilisateur
+	ID          uint      `gorm:"primaryKey"`
+	LinkID      uint      `gorm:"not null"`
+	IPAddress   string
+	UserAgent   string
+	ClickedAt   time.Time
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 // ClickEvent représente un clic brut, transmis dans un channel (non stocké directement par GORM)
