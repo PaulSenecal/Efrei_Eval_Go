@@ -7,8 +7,8 @@ import (
 	"sync" // Pour protéger l'accès concurrentiel à knownStates
 	"time"
 
-	_ "github.com/axellelanca/urlshortener/internal/models"   // Importe les modèles de liens
-	"github.com/axellelanca/urlshortener/internal/repository" // Importe le repository de liens
+	_ "urlshortenerGroupe8/internal/models"   // Importe les modèles de liens
+	"urlshortenerGroupe8/internal/repository" // Importe le repository de liens
 )
 type URLMonitor struct {
     linkService           services.LinkService

@@ -4,8 +4,8 @@ package workers
 import (
 	"log"
 
-	"github.com/axellelanca/urlshortener/internal/models"
-	"github.com/axellelanca/urlshortener/internal/repository" // Nécessaire pour interagir avec le ClickRepository
+	"urlshortenerGroupe8/internal/models"
+	"urlshortenerGroupe8/internal/repository" // Nécessaire pour interagir avec le ClickRepository
 )
 
 type ClickWorkerManager struct {

@@ -3,7 +3,6 @@ package models
 
 import (
     "time"
-    "gorm.io/gorm"
 )
 
 // Click représente un événement de clic sur un lien raccourci.
@@ -17,12 +16,19 @@ import (
 	IPAddress string    `gorm:"size:50"`  // Adresse IP de l'utilisateur
 */
 
-	type Click struct {
-		ID          uint      `gorm:"primaryKey"`
-		LinkID      uint      `gorm:"not null"`
-		IPAddress   string
-		UserAgent   string
-		ClickedAt   time.Time
-		CreatedAt   time.Time
-		UpdatedAt   time.Time
-	}
+type Click struct {
+	ID        uint      `gorm:"primaryKey"`
+	LinkID    uint      `gorm:"index"`
+	Link      Link      `gorm:"foreignKey:LinkID"`
+	Timestamp time.Time
+	UserAgent string    `gorm:"size:255"`
+	IPAddress string    `gorm:"size:50"`
+}
+
+// TODO créer la struct pour ClickEvent
+type ClickEvent struct {
+	LinkID    uint
+	Timestamp time.Time
+	UserAgent string
+	IPAddress string
+}

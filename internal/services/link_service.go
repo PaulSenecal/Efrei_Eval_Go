@@ -11,8 +11,8 @@ import (
 
 	"gorm.io/gorm" // Nécessaire pour la gestion spécifique de gorm.ErrRecordNotFound
 
-	"github.com/axellelanca/urlshortener/internal/models"
-	"github.com/axellelanca/urlshortener/internal/repository" // Importe le package repository
+	"urlshortenerGroupe8/internal/models"
+	"urlshortenerGroupe8/internal/repository" // Importe le package repository
 )
 
 type LinkService interface {

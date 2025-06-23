@@ -1,83 +1,63 @@
-//internal\config\config.go
 package config
 
 import (
-	"fmt"
-	"log" // Pour logger les informations ou erreurs de chargement de config
-
-	"github.com/spf13/viper" // La bibliothèque pour la gestion de configuration
+	"log"
+	"github.com/spf13/viper"
 )
 
-type ApplicationConfiguration struct {
-    Server     ServerConfiguration
-    Database   DatabaseConfiguration
-    Monitoring MonitoringConfiguration
-    Analytics  AnalyticsConfiguration
-    ShortURL   ShortURLConfiguration
+type Config struct {
+	Server struct {
+		Port    int    `mapstructure:"port"`
+		Host    string `mapstructure:"host"`
+		BaseURL string `mapstructure:"base_url"`
+	} `mapstructure:"server"`
+	
+	Database struct {
+		Name string `mapstructure:"name"`
+	} `mapstructure:"database"`
+	
+	Analytics struct {
+		BufferSize  int `mapstructure:"buffer_size"`
+		WorkerCount int `mapstructure:"worker_count"`
+	} `mapstructure:"analytics"`
+	
+	Monitor struct {
+		IntervalMinutes int `mapstructure:"interval_minutes"`
+	} `mapstructure:"monitor"`
+	
+	ShortURL struct {
+		CodeLength int    `mapstructure:"code_length"`
+		BaseURL    string `mapstructure:"base_url"`
+	} `mapstructure:"short_url"`
 }
 
-type ServerConfiguration struct {
-    Port int
-    Host string
-}
-
-type DatabaseConfiguration struct {
-    Path string
-}
-
-type MonitoringConfiguration struct {
-    CheckIntervalMinutes int
-}
-
-type AnalyticsConfiguration struct {
-    BufferSize   int
-    WorkerCount  int
-}
-
-type ShortURLConfiguration struct {
-    CodeLength int
-    BaseURL    string
-}
-
-func LoadApplicationConfiguration() *ApplicationConfiguration {
-    viper.SetConfigName("config")
-    viper.SetConfigType("yaml")
-    viper.AddConfigPath("./configs")
-    viper.AddConfigPath(".")
-    
-    if err := viper.ReadInConfig(); err != nil {
-        log.Printf("Impossible de lire le fichier de configuration: %v", err)
-        return getDefaultConfiguration()
-    }
-    
-    var applicationConfiguration ApplicationConfiguration
-    if err := viper.Unmarshal(&applicationConfiguration); err != nil {
-        log.Printf("Impossible de parser la configuration: %v", err)
-        return getDefaultConfiguration()
-    }
-    
-    return &applicationConfiguration
-}
-
-func getDefaultConfiguration() *ApplicationConfiguration {
-    return &ApplicationConfiguration{
-        Server: ServerConfiguration{
-            Port: 8080,
-            Host: "localhost",
-        },
-        Database: DatabaseConfiguration{
-            Path: "url_shortener.db",
-        },
-        Monitoring: MonitoringConfiguration{
-            CheckIntervalMinutes: 5,
-        },
-        Analytics: AnalyticsConfiguration{
-            BufferSize:  1000,
-            WorkerCount: 5,
-        },
-        ShortURL: ShortURLConfiguration{
-            CodeLength: 6,
-            BaseURL:    "http://localhost:8080",
-        },
-    }
+func LoadConfig() (*Config, error) {
+	viper.AddConfigPath("./configs")
+	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
+	
+	// Valeurs par défaut
+	viper.SetDefault("server.port", 8080)
+	viper.SetDefault("server.host", "localhost")
+	viper.SetDefault("server.base_url", "http://localhost:8080")
+	viper.SetDefault("database.name", "url_shortener.db")
+	viper.SetDefault("analytics.buffer_size", 1000)
+	viper.SetDefault("analytics.worker_count", 5)
+	viper.SetDefault("monitor.interval_minutes", 5)
+	viper.SetDefault("short_url.code_length", 6)
+	viper.SetDefault("short_url.base_url", "http://localhost:8080")
+	
+	if err := viper.ReadInConfig(); err != nil {
+		log.Printf("Impossible de lire le fichier de configuration: %v", err)
+	}
+	
+	var cfg Config
+	if err := viper.Unmarshal(&cfg); err != nil {
+		return nil, err
+	}
+	
+	log.Printf("Configuration loaded: Server Port=%d, DB Name=%s, Analytics Buffer=%d, Monitor Interval=%dmin",
+		cfg.Server.Port, cfg.Database.Name, cfg.Analytics.BufferSize, cfg.Monitor.IntervalMinutes)
+	
+	return &cfg, nil
 }

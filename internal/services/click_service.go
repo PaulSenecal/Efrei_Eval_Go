@@ -3,8 +3,8 @@ package services
 
 import (
     "time"
-	"github.com/axellelanca/urlshortener/internal/models"
-	"github.com/axellelanca/urlshortener/internal/repository" // Importe le package repository
+	"urlshortenerGroupe8/internal/models"
+	"urlshortenerGroupe8/internal/repository" // Importe le package repository
 )
 
 type ClickService interface {

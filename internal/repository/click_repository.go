@@ -4,7 +4,7 @@ package repository
 import (
 	"fmt"
 
-	"github.com/axellelanca/urlshortener/internal/models"
+	"urlshortenerGroupe8/internal/models"
 	"gorm.io/gorm"
 )
 

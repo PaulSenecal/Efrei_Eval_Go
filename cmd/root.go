@@ -1,4 +1,3 @@
-//cmd\root.go
 package cmd
 
 import (
@@ -6,49 +5,38 @@ import (
 	"log"
 	"os"
 
-	"github.com/axellelanca/urlshortener/internal/config"
+	"urlshortenerGroupe8/cmd/cli"
+	"urlshortenerGroupe8/cmd/server"
+	"urlshortenerGroupe8/internal/config"
 	"github.com/spf13/cobra"
 )
 
-// cfg est la variable globale qui contiendra la configuration chargée.
-// Elle sera accessible à toutes les commandes Cobra.
 var Cfg *config.Config
 
-// TODO : Créer la RootCmd avec Cobra
-// Utiliser ces descriptions :
-// "Un service de raccourcissement d'URLs avec API REST et CLI"
-// `
-//'url-shortener' est une application complète pour gérer des URLs courtes.
-//Elle inclut un serveur API pour le raccourcissement et la redirection,
-//ainsi qu'une interface en ligne de commande pour l'administration.
-//
-//Utilisez 'url-shortener [command] --help' pour plus d'informations sur une commande.`
+var RootCmd = &cobra.Command{
+	Use:   "url-shortener",
+	Short: "Un service de raccourcissement d'URLs avec API REST et CLI",
+	Long: `'url-shortener' est une application complète pour gérer des URLs courtes.
+Elle inclut un serveur API pour le raccourcissement et la redirection,
+ainsi qu'une interface en ligne de commande pour l'administration.
 
-// rootCmd représente la commande de base lorsque l'on appelle l'application sans sous-commande.
-// C'est le point d'entrée principal pour Cobra.
-
-// Execute est le point d'entrée principal pour l'application Cobra.
-// Il est appelé depuis 'main.go'.
-
-
-var rootCommand = &cobra.Command{
-    Use:   "url-shortener",
-    Short: "Service de raccourcissement d'URLs",
+Utilisez 'url-shortener [command] --help' pour plus d'informations sur une commande.`,
 }
 
 func Execute() {
-    if err := rootCommand.Execute(); err != nil {
-        //fmt.Println(err)
+	if err := RootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Erreur lors de l'exécution de la commande: %v\n", err)
-        os.Exit(1)
-    }
+		os.Exit(1)
+	}
 }
 
 func init() {
-    rootCommand.AddCommand(server.ServerCommand)
-    rootCommand.AddCommand(cli.CreateCommand)
-    rootCommand.AddCommand(cli.StatsCommand)
-    rootCommand.AddCommand(cli.MigrateCommand)
+	cobra.OnInitialize(initConfig)
+	
+	RootCmd.AddCommand(server.RunServerCmd)
+	RootCmd.AddCommand(cli.CreateCmd)
+	RootCmd.AddCommand(cli.StatsCmd)
+	RootCmd.AddCommand(cli.MigrateCmd)
 }
 
 func initConfig() {

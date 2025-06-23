@@ -7,9 +7,9 @@ import (
 	"net/url" // Pour valider le format de l'URL
 	"os"
 
-	cmd2 "github.com/axellelanca/urlshortener/cmd"
-	"github.com/axellelanca/urlshortener/internal/repository"
-	"github.com/axellelanca/urlshortener/internal/services"
+	cmd2 "urlshortenerGroupe8/cmd"
+	"urlshortenerGroupe8/internal/repository"
+	"urlshortenerGroupe8/internal/services"
 	"github.com/spf13/cobra"
 	"gorm.io/driver/sqlite" // Driver SQLite pour GORM
 	"gorm.io/gorm"
