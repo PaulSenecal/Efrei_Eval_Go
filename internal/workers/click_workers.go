@@ -1,3 +1,4 @@
+//internal\workers\click_workers.go
 package workers
 
 import (
