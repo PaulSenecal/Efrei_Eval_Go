@@ -1,42 +1,48 @@
 package cli
 
 import (
-	"fmt"
-	"log"
+"fmt"
+"log"
 
-	cmd2 "github.com/axellelanca/urlshortener/cmd"
-	"github.com/axellelanca/urlshortener/internal/models"
-	"github.com/spf13/cobra"
-	"gorm.io/driver/sqlite" // Driver SQLite pour GORM
-	"gorm.io/gorm"
+cmd2 "github.com/axellelanca/urlshortener/cmd"
+"github.com/axellelanca/urlshortener/internal/models"
+"github.com/spf13/cobra"
+"gorm.io/driver/sqlite" // Driver SQLite pour GORM
+"gorm.io/gorm"
 )
 
 // MigrateCmd représente la commande 'migrate'
 var MigrateCmd = &cobra.Command{
-	Use:   "migrate",
-	Short: "Exécute les migrations de la base de données pour créer ou mettre à jour les tables.",
-	Long: `Cette commande se connecte à la base de données configurée (SQLite)
+Use:   "migrate",
+Short: "Exécute les migrations de la base de données pour créer ou mettre à jour les tables.",
+Long: `Cette commande se connecte à la base de données configurée (SQLite)
 et exécute les migrations automatiques de GORM pour créer les tables 'links' et 'clicks'
 basées sur les modèles Go.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		// TODO : Charger la configuration chargée globalement via cmd.cfg
+Run: func(cmd *cobra.Command, args []string) {
+cfg := cmd2.Cfg
 
-		// TODO 2: Initialiser la connexion à la base de données SQLite avec GORM.
+log.Printf("Configuration chargée: Port=%d, DB=%s, Buffer=%d, Interval=%dmin",
+cfg.Server.Port, cfg.Database.Name, cfg.Analytics.BufferSize, cfg.Monitor.IntervalMinutes)
 
-		sqlDB, err := db.DB()
-		if err != nil {
-			log.Fatalf("FATAL: Échec de l'obtention de la base de données SQL sous-jacente: %v", err)
-		}
-		// TODO Assurez-vous que la connexion est fermée après la migration.
+db, err := gorm.Open(sqlite.Open(cfg.Database.Name), &gorm.Config{})
+if err != nil {
+log.Fatalf("FATAL: Échec de connexion à la base de données: %v", err)
+}
 
-		// TODO 3: Exécuter les migrations automatiques de GORM.
-		// Utilisez db.AutoMigrate() et passez-lui les pointeurs vers tous vos modèles.
+sqlDB, err := db.DB()
+if err != nil {
+log.Fatalf("FATAL: Échec de l'obtention de la base SQL sous-jacente: %v", err)
+}
+defer sqlDB.Close()
 
-		// Pas touche au log
-		fmt.Println("Migrations de la base de données exécutées avec succès.")
-	},
+if err := db.AutoMigrate(&models.Link{}, &models.Click{}); err != nil {
+log.Fatalf("FATAL: Échec de l'exécution des migrations: %v", err)
+}
+
+fmt.Println("Migrations de la base de données exécutées avec succès.")
+},
 }
 
 func init() {
-	// TODO : Ajouter la commande à RootCmd
+cmd2.RootCmd.AddCommand(MigrateCmd)
 }
