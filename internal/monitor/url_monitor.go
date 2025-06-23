@@ -1,4 +1,3 @@
-//internal\monitor\url_monitor.go
 package monitor
 
 import (
@@ -10,7 +9,6 @@ import (
 	_ "github.com/axellelanca/urlshortener/internal/models"   // Importe les modèles de liens
 	"github.com/axellelanca/urlshortener/internal/repository" // Importe le repository de liens
 )
-
 
 // UrlMonitor gère la surveillance périodique des URLs longues.
 type UrlMonitor struct {
@@ -97,31 +95,4 @@ func formatState(accessible bool) string {
 		return "ACCESSIBLE"
 	}
 	return "INACCESSIBLE"
-
-}
-
-func (monitor *URLMonitor) handleAccessibilityStatusChange(link services.Link, newAccessibilityStatus bool) {
-    err := monitor.linkService.UpdateLinkAccessibilityStatus(link.ID, newAccessibilityStatus)
-    if err != nil {
-        log.Printf("Erreur lors de la mise à jour du statut: %v", err)
-        return
-    }
-    
-    previousStatus := "ACCESSIBLE"
-    currentStatus := "INACCESSIBLE"
-    
-    if newAccessibilityStatus {
-        previousStatus = "INACCESSIBLE"
-        currentStatus = "ACCESSIBLE"
-    }
-    
-    notificationMessage := fmt.Sprintf(
-        "[NOTIFICATION] Le lien %s (%s) est passé de %s à %s !",
-        link.ShortCode,
-        link.LongURL,
-        previousStatus,
-        currentStatus,
-    )
-    
-    log.Println(notificationMessage)
 }

@@ -1,106 +1,60 @@
 package repository
 
 import (
-	"crypto/rand"
-	"errors"
 	"fmt"
-	"log"
-	"math/big"
-	"time"
-
-	"gorm.io/gorm" // Nécessaire pour la gestion spécifique de gorm.ErrRecordNotFound
 
 	"github.com/axellelanca/urlshortener/internal/models"
-	//"github.com/axellelanca/urlshortener/internal/repository" // Importe le package repository
+	"gorm.io/gorm"
 )
 
-const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-
-// Struct LinkService
-type LinkService struct {
-	linkRepo repository.LinkRepository
+// Interface pour les opérations sur les liens
+type LinkRepository interface {
+	CreateLink(link *models.Link) error
+	GetLinkByShortCode(shortCode string) (*models.Link, error)
+	GetAllLinks() ([]models.Link, error)
+	CountClicksByLinkID(linkID uint) (int, error)
 }
 
-// Constructeur
-func NewLinkService(linkRepo repository.LinkRepository) *LinkService {
-	return &LinkService{
-		linkRepo: linkRepo,
-	}
+// Implémentation GORM du LinkRepository
+type GormLinkRepository struct {
+	db *gorm.DB
 }
 
-// Génère un shortCode sécurisé et aléatoire
-func (s *LinkService) GenerateShortCode(length int) (string, error) {
-	code := make([]byte, length)
-	for i := range code {
-		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
-		if err != nil {
-			return "", fmt.Errorf("erreur lors de la génération du shortCode : %w", err)
-		}
-		code[i] = charset[num.Int64()]
-	}
-	return string(code), nil
+func NewLinkRepository(db *gorm.DB) *GormLinkRepository {
+	return &GormLinkRepository{db: db}
 }
 
-// Création d’un lien court avec gestion des collisions
-func (s *LinkService) CreateLink(longURL string) (*models.Link, error) {
-	var shortCode string
-	const maxRetries = 5
-
-	for i := 0; i < maxRetries; i++ {
-		code, err := s.GenerateShortCode(6)
-		if err != nil {
-			return nil, fmt.Errorf("échec de la génération du code : %w", err)
-		}
-
-		_, err = s.linkRepo.GetLinkByShortCode(code)
-		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				shortCode = code
-				break
-			}
-			return nil, fmt.Errorf("erreur lors de la vérification du code : %w", err)
-		}
-
-		log.Printf("Short code '%s' déjà existant, tentative %d/%d", code, i+1, maxRetries)
+// Crée un lien court
+func (r *GormLinkRepository) CreateLink(link *models.Link) error {
+	if err := r.db.Create(link).Error; err != nil {
+		return fmt.Errorf("échec de la création du lien : %w", err)
 	}
-
-	if shortCode == "" {
-		return nil, errors.New("échec : impossible de générer un code unique après plusieurs tentatives")
-	}
-
-	link := &models.Link{
-		ShortCode: shortCode,
-		LongURL:   longURL,
-		CreatedAt: time.Now(),
-	}
-
-	if err := s.linkRepo.CreateLink(link); err != nil {
-		return nil, fmt.Errorf("échec de la création du lien : %w", err)
-	}
-
-	return link, nil
+	return nil
 }
 
-// Récupération d’un lien via son code
-func (s *LinkService) GetLinkByShortCode(shortCode string) (*models.Link, error) {
-	link, err := s.linkRepo.GetLinkByShortCode(shortCode)
-	if err != nil {
-		return nil, fmt.Errorf("échec de la récupération du lien : %w", err)
+// Récupère un lien par son code
+func (r *GormLinkRepository) GetLinkByShortCode(shortCode string) (*models.Link, error) {
+	var link models.Link
+	if err := r.db.Where("short_code = ?", shortCode).First(&link).Error; err != nil {
+		return nil, fmt.Errorf("échec de récupération du lien %s : %w", shortCode, err)
 	}
-	return link, nil
+	return &link, nil
 }
 
-// Récupération des statistiques
-func (s *LinkService) GetLinkStats(shortCode string) (*models.Link, int, error) {
-	link, err := s.linkRepo.GetLinkByShortCode(shortCode)
-	if err != nil {
-		return nil, 0, fmt.Errorf("échec de la récupération du lien : %w", err)
+// Récupère tous les liens (utilisé par le moniteur)
+func (r *GormLinkRepository) GetAllLinks() ([]models.Link, error) {
+	var links []models.Link
+	if err := r.db.Find(&links).Error; err != nil {
+		return nil, fmt.Errorf("échec de récupération des liens : %w", err)
 	}
+	return links, nil
+}
 
-	count, err := s.linkRepo.CountClicksByLinkID(link.ID)
-	if err != nil {
-		return link, 0, fmt.Errorf("échec du comptage des clics : %w", err)
+// Compte les clics associés à un lien
+func (r *GormLinkRepository) CountClicksByLinkID(linkID uint) (int, error) {
+	var count int64
+	if err := r.db.Model(&models.Click{}).Where("link_id = ?", linkID).Count(&count).Error; err != nil {
+		return 0, fmt.Errorf("échec du comptage des clics pour le lien %d : %w", linkID, err)
 	}
-
-	return link, count, nil
+	return int(count), nil
 }
