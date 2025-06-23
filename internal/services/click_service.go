@@ -1,34 +1,37 @@
-
 package services
 
 import (
-    "time"
-	"github.com/axellelanca/urlshortener/internal/models"
-	"github.com/axellelanca/urlshortener/internal/repository" // Importe le package repository
+"fmt"
+
+"github.com/axellelanca/urlshortener/internal/models"
+"github.com/axellelanca/urlshortener/internal/repository" // Importe le package repository
 )
 
-type ClickService interface {
-    RecordClickEvent(clickEvent models.ClickEvent, linkID uint) error
+// ClickService gère la logique métier liée aux clics
+type ClickService struct {
+clickRepo repository.ClickRepository
 }
 
-type clickServiceImplementation struct {
-    clickRepository repository.ClickRepository
-    linkRepository  repository.LinkRepository
+// Constructeur
+func NewClickService(clickRepo repository.ClickRepository) *ClickService {
+return &ClickService{
+clickRepo: clickRepo,
+}
 }
 
-func NewClickService(clickRepository repository.ClickRepository) ClickService {
-    return &clickServiceImplementation{
-        clickRepository: clickRepository,
-    }
+// Enregistre un clic
+func (s *ClickService) RecordClick(click *models.Click) error {
+if err := s.clickRepo.CreateClick(click); err != nil {
+return fmt.Errorf("erreur lors de l'enregistrement du clic : %w", err)
+}
+return nil
 }
 
-func (service *clickServiceImplementation) RecordClickEvent(clickEvent models.ClickEvent, linkID uint) error {
-    clickRecord := &models.Click{
-        LinkID:    linkID,
-        IPAddress: clickEvent.IPAddress,
-        UserAgent: clickEvent.UserAgent,
-        ClickedAt: time.Now(),
-    }
-    
-    return service.clickRepository.RecordNewClick(clickRecord)
+// Compte les clics pour un lien donné
+func (s *ClickService) GetClicksCountByLinkID(linkID uint) (int, error) {
+count, err := s.clickRepo.CountClicksByLinkID(linkID)
+if err != nil {
+return 0, fmt.Errorf("erreur lors du comptage des clics : %w", err)
+}
+return count, nil
 }
