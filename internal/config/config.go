@@ -1,3 +1,4 @@
+//internal\config\config.go
 package config
 
 import (
@@ -7,37 +8,76 @@ import (
 	"github.com/spf13/viper" // La bibliothèque pour la gestion de configuration
 )
 
-// TODO Créer Config qui est la structure principale qui mappe l'intégralité de la configuration de l'application.
-// Les tags `mapstructure` sont utilisés par Viper pour mapper les clés du fichier de config
-// (ou des variables d'environnement) aux champs de la structure Go.
-type Config struct {
+type ApplicationConfiguration struct {
+    Server     ServerConfiguration
+    Database   DatabaseConfiguration
+    Monitoring MonitoringConfiguration
+    Analytics  AnalyticsConfiguration
+    ShortURL   ShortURLConfiguration
 }
 
-// LoadConfig charge la configuration de l'application en utilisant Viper.
-// Elle recherche un fichier 'config.yaml' dans le dossier 'configs/'.
-// Elle définit également des valeurs par défaut si le fichier de config est absent ou incomplet.
-func LoadConfig() (*Config, error) {
-	// TODO Spécifie le chemin où Viper doit chercher les fichiers de config.
-	// on cherche dans le dossier 'configs' relatif au répertoire d'exécution.
+type ServerConfiguration struct {
+    Port int
+    Host string
+}
 
-	// TODO Spécifie le nom du fichier de config (sans l'extension).
+type DatabaseConfiguration struct {
+    Path string
+}
 
-	// TODO Spécifie le type de fichier de config.
-	viper.SetConfigType("yaml")
+type MonitoringConfiguration struct {
+    CheckIntervalMinutes int
+}
 
-	// TODO : Définir les valeurs par défaut pour toutes les options de configuration.
-	// Ces valeurs seront utilisées si les clés correspondantes ne sont pas trouvées dans le fichier de config
-	// ou si le fichier n'existe pas.
-	// server.port, server.base_url etc.
+type AnalyticsConfiguration struct {
+    BufferSize   int
+    WorkerCount  int
+}
 
-	// TODO : Lire le fichier de configuration.
+type ShortURLConfiguration struct {
+    CodeLength int
+    BaseURL    string
+}
 
-	// TODO 4: Démapper (unmarshal) la configuration lue (ou les valeurs par défaut) dans la structure Config.
-	var cfg Config
+func LoadApplicationConfiguration() *ApplicationConfiguration {
+    viper.SetConfigName("config")
+    viper.SetConfigType("yaml")
+    viper.AddConfigPath("./configs")
+    viper.AddConfigPath(".")
+    
+    if err := viper.ReadInConfig(); err != nil {
+        log.Printf("Impossible de lire le fichier de configuration: %v", err)
+        return getDefaultConfiguration()
+    }
+    
+    var applicationConfiguration ApplicationConfiguration
+    if err := viper.Unmarshal(&applicationConfiguration); err != nil {
+        log.Printf("Impossible de parser la configuration: %v", err)
+        return getDefaultConfiguration()
+    }
+    
+    return &applicationConfiguration
+}
 
-	// Log  pour vérifier la config chargée
-	log.Printf("Configuration loaded: Server Port=%d, DB Name=%s, Analytics Buffer=%d, Monitor Interval=%dmin",
-		cfg.Server.Port, cfg.Database.Name, cfg.Analytics.BufferSize, cfg.Monitor.IntervalMinutes)
-
-	return &cfg, nil // Retourne la configuration chargée
+func getDefaultConfiguration() *ApplicationConfiguration {
+    return &ApplicationConfiguration{
+        Server: ServerConfiguration{
+            Port: 8080,
+            Host: "localhost",
+        },
+        Database: DatabaseConfiguration{
+            Path: "url_shortener.db",
+        },
+        Monitoring: MonitoringConfiguration{
+            CheckIntervalMinutes: 5,
+        },
+        Analytics: AnalyticsConfiguration{
+            BufferSize:  1000,
+            WorkerCount: 5,
+        },
+        ShortURL: ShortURLConfiguration{
+            CodeLength: 6,
+            BaseURL:    "http://localhost:8080",
+        },
+    }
 }
