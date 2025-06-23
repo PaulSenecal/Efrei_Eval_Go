@@ -51,18 +51,10 @@ func init() {
     rootCommand.AddCommand(cli.MigrateCommand)
 }
 
-// initConfig charge la configuration de l'application.
-// Cette fonction est appelée au début de l'exécution de chaque commande Cobra
-// grâce à `cobra.OnInitialize(initConfig)`.
 func initConfig() {
 	var err error
 	Cfg, err = config.LoadConfig()
 	if err != nil {
-		// Loggue l'erreur mais ne fait pas un os.Exit(1) ici si LoadConfig()
-		// gère déjà l'absence de fichier avec des valeurs par défaut.
-		// Si LoadConfig() termine le programme en cas d'erreur fatale,
-		// cette vérification est surtout pour les avertissements.
 		log.Printf("Attention: Problème lors du chargement de la configuration: %v. Utilisation des valeurs par défaut.", err)
 	}
-	// La configuration est maintenant disponible via la variable globale 'cmd.cfg'.
 }

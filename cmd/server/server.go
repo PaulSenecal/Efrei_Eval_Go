@@ -1,3 +1,4 @@
+//cmd\server\server.go
 package server
 
 import (
@@ -23,6 +24,103 @@ import (
 	"gorm.io/gorm"
 )
 
+
+var ServerCommand = &cobra.Command{
+    Use:   "run-server",
+    Short: "Lance le serveur API, les workers et le moniteur",
+    Run:   executeServerCommand,
+}
+
+func executeServerCommand(cmd *cobra.Command, args []string) {
+    applicationConfiguration := config.LoadApplicationConfiguration()
+    
+    databaseConnection, err := initializeDatabaseConnection(applicationConfiguration.Database.Path)
+    if err != nil {
+        log.Fatalf("Impossible de se connecter à la base de données: %v", err)
+    }
+
+    linkRepository := repository.NewLinkRepository(databaseConnection)
+    clickRepository := repository.NewClickRepository(databaseConnection)
+    
+    linkService := services.NewLinkService(linkRepository)
+    clickService := services.NewClickService(clickRepository)
+    
+    clickEventChannel := make(chan models.ClickEvent, applicationConfiguration.Analytics.BufferSize)
+    
+    clickWorkerManager := workers.NewClickWorkerManager(
+        clickEventChannel,
+        clickService,
+        applicationConfiguration.Analytics.WorkerCount,
+    )
+    clickWorkerManager.StartAllWorkers()
+    
+    urlMonitor := monitor.NewURLMonitor(
+        linkService,
+        time.Duration(applicationConfiguration.Monitoring.CheckIntervalMinutes)*time.Minute,
+    )
+    urlMonitor.StartMonitoring()
+    
+    httpServer := createAndConfigureHTTPServer(
+        applicationConfiguration,
+        linkService,
+        clickEventChannel,
+    )
+    
+    go func() {
+        serverAddress := fmt.Sprintf("%s:%d", applicationConfiguration.Server.Host, applicationConfiguration.Server.Port)
+        log.Printf("Serveur HTTP démarré sur %s", serverAddress)
+        if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+            log.Fatalf("Erreur lors du démarrage du serveur: %v", err)
+        }
+    }()
+    
+    waitForShutdownSignal()
+    
+    shutdownContext, cancelShutdown := context.WithTimeout(context.Background(), 5*time.Second)
+    defer cancelShutdown()
+    
+    if err := httpServer.Shutdown(shutdownContext); err != nil {
+        log.Printf("Erreur lors de l'arrêt du serveur: %v", err)
+    }
+    
+    clickWorkerManager.StopAllWorkers()
+    urlMonitor.StopMonitoring()
+    close(clickEventChannel)
+    
+    log.Println("Serveur arrêté proprement")
+}
+
+func initializeDatabaseConnection(databasePath string) (*gorm.DB, error) {
+    return gorm.Open(sqlite.Open(databasePath), &gorm.Config{})
+}
+
+func createAndConfigureHTTPServer(
+    applicationConfiguration *config.ApplicationConfiguration,
+    linkService services.LinkService,
+    clickEventChannel chan models.ClickEvent,
+) *http.Server {
+    ginRouter := gin.Default()
+    
+    apiHandlers := api.NewAPIHandlers(linkService, clickEventChannel)
+    
+    ginRouter.GET("/health", apiHandlers.HandleHealthCheck)
+    ginRouter.POST("/api/v1/links", apiHandlers.HandleCreateShortLink)
+    ginRouter.GET("/:shortCode", apiHandlers.HandleRedirectToLongURL)
+    ginRouter.GET("/api/v1/links/:shortCode/stats", apiHandlers.HandleGetLinkStatistics)
+    
+    return &http.Server{
+        Addr:    fmt.Sprintf("%s:%d", applicationConfiguration.Server.Host, applicationConfiguration.Server.Port),
+        Handler: ginRouter,
+    }
+}
+
+func waitForShutdownSignal() {
+    shutdownSignalChannel := make(chan os.Signal, 1)
+    signal.Notify(shutdownSignalChannel, os.Interrupt, syscall.SIGTERM)
+    <-shutdownSignalChannel
+    log.Println("Signal d'arrêt reçu")
+}
+/*
 // RunServerCmd représente la commande 'run-server' de Cobra.
 // C'est le point d'entrée pour lancer le serveur de l'application.
 var RunServerCmd = &cobra.Command{
@@ -102,3 +200,4 @@ puis lance le serveur HTTP.`,
 func init() {
 	// TODO : ajouter la commande
 }
+*/
